@@ -1,51 +1,51 @@
-//Include libraries
+// Include libraries
 #include <Wire.h>
 #include <Stepper.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-// OLED inställningar
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-#define OLED_RESET -1
+// OLED display settings
+#define SCREEN_WIDTH 128              // OLED display width in pixels
+#define SCREEN_HEIGHT 64              // OLED display height in pixels
+#define OLED_RESET -1                 // No reset pin used
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-// IR-sensor
-const int sensorDigitalPin = 9;
-const int sensorAnalogPin = A0;
+// IR sensor pins
+const int sensorDigitalPin = 9;       // Digital output from IR sensor
+const int sensorAnalogPin = A0;       // Analog output from IR sensor
 
-// Stegmotor
-const int stepsPerRevolution = 2048;
+// Stepper motor configuration
+const int stepsPerRevolution = 2048;  // Steps per full revolution
 const int motorPin1 = 2;
 const int motorPin2 = 3;
 const int motorPin3 = 4;
 const int motorPin4 = 5;
-Stepper myStepper(stepsPerRevolution, motorPin1, motorPin3, motorPin2, motorPin4);
+Stepper myStepper(stepsPerRevolution, motorPin1, motorPin3, motorPin2, motorPin4); // Initialize stepper motor
 
-// Piezo & LED
-const int piezoPin = 11;
-const int ledPin = 12;
+// Piezo buzzer and LED
+const int piezoPin = 11;              // Pin for piezo buzzer
+const int ledPin = 12;                // Pin for LED
 
-// Sensorvariabler
-int threshold = 500;
-int detectionCount = 0;
-int releaseCount = 0;
-const int detectionThreshold = 3;
-const int releaseThreshold = 5;
-const int bufferSize = 5;
-int analogBuffer[bufferSize];
-int bufferIndex = 0;
+// Sensor-related variables
+int threshold = 500;                  // Initial threshold value
+int detectionCount = 0;              // Counter for object detection
+int releaseCount = 0;                // Counter for object absence
+const int detectionThreshold = 3;    // Number of detections to confirm presence
+const int releaseThreshold = 5;      // Number of releases to confirm absence
+const int bufferSize = 5;            // Size of moving average buffer
+int analogBuffer[bufferSize];        // Buffer to hold recent analog values
+int bufferIndex = 0;                 // Index for circular buffer
 
-bool obstacleDetected = false;
-bool motorRunning = false;
+bool obstacleDetected = false;       // Current obstacle detection status
+bool motorRunning = false;           // Whether the motor is currently running
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(9600);                // Start serial communication
 
-  // OLED init
+  // Initialize OLED display
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println(F("OLED initiering misslyckades"));
-    while (true);
+    Serial.println(F("OLED initialization failed"));
+    while (true);                    // Halt program if display fails
   }
 
   display.clearDisplay();
@@ -55,6 +55,7 @@ void setup() {
   display.println("System starting...");
   display.display();
 
+  // Set pin modes
   pinMode(sensorDigitalPin, INPUT);
   pinMode(motorPin1, OUTPUT);
   pinMode(motorPin2, OUTPUT);
@@ -63,16 +64,16 @@ void setup() {
   pinMode(piezoPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
 
-  myStepper.setSpeed(10);
+  myStepper.setSpeed(10);           // Set motor speed
 
-  // Init buffer
+  // Initialize buffer with high values
   for (int i = 0; i < bufferSize; i++) {
     analogBuffer[i] = 1023;
   }
 
-  delay(3000); // Sensor stabilisering
+  delay(3000);                       // Wait for sensor stabilization
 
-  // Kalibrera sensor
+  // Calibrate sensor: take average value and calculate threshold
   int baselineSum = 0;
   for (int i = 0; i < 20; i++) {
     baselineSum += analogRead(sensorAnalogPin);
@@ -80,9 +81,9 @@ void setup() {
   }
   int baseline = baselineSum / 20;
   threshold = baseline - 100;
-  if (threshold < 100) threshold = 100;
+  if (threshold < 100) threshold = 100; // Avoid too low threshold
 
-  Serial.print("Tröskelvärde: ");
+  Serial.print("Threshold: ");
   Serial.println(threshold);
 
   display.clearDisplay();
@@ -93,20 +94,25 @@ void setup() {
 }
 
 void loop() {
+  // Read values from the IR sensor
   int digitalValue = digitalRead(sensorDigitalPin);
   int analogValue = analogRead(sensorAnalogPin);
 
+  // Update moving average buffer
   analogBuffer[bufferIndex] = analogValue;
   bufferIndex = (bufferIndex + 1) % bufferSize;
 
+  // Calculate average of recent analog values
   int analogAverage = 0;
   for (int i = 0; i < bufferSize; i++) {
     analogAverage += analogBuffer[i];
   }
   analogAverage /= bufferSize;
 
+  // Determine if object is currently detected
   bool currentDetection = (digitalValue == LOW || analogAverage < threshold);
 
+  // Update detection/release counters
   if (currentDetection) {
     detectionCount++;
     releaseCount = 0;
@@ -115,42 +121,47 @@ void loop() {
     detectionCount = 0;
   }
 
+  // Object detected
   if (!obstacleDetected && detectionCount >= detectionThreshold) {
     obstacleDetected = true;
-    Serial.println("Objekt detekterat!");
-  } else if (obstacleDetected && releaseCount >= releaseThreshold) {
+    Serial.println("Object detected!");
+  } 
+  // Object removed
+  else if (obstacleDetected && releaseCount >= releaseThreshold) {
     obstacleDetected = false;
-    Serial.println("Objekt borta.");
+    Serial.println("Object gone.");
   }
 
-  // --- DISPLAY ---
+  // --- OLED DISPLAY ---
   display.clearDisplay();
   display.setCursor(0, 0);
 
   if (obstacleDetected) {
-    myStepper.step(stepsPerRevolution / 32);  // Kör motorn
-    digitalWrite(ledPin, HIGH);               // Tänd LED
-    tone(piezoPin, 1000, 200);                // Spela ton i 200ms
-    display.println("Dispensing...");
+    myStepper.step(stepsPerRevolution / 32);  // Run the motor
+    digitalWrite(ledPin, HIGH);               // Turn on LED
+    tone(piezoPin, 1000, 200);                // Play tone for 200ms
+    display.println("Dispensing...");         // Show status
     motorRunning = true;
   } else {
     if (motorRunning) {
-      turnOffStepper();
-      digitalWrite(ledPin, LOW);              // Släck LED
-      noTone(piezoPin);                       // Stoppa ton
+      turnOffStepper();                       // Stop motor
+      digitalWrite(ledPin, LOW);              // Turn off LED
+      noTone(piezoPin);                       // Stop tone
       motorRunning = false;
     }
-    display.println("Waiting for object...");
+    display.println("Waiting for object..."); // Show standby
   }
 
+  // Show detection status
   display.setCursor(0, 30);
   display.print("Detected: ");
   display.println(obstacleDetected ? "YES" : "NO");
   display.display();
 
-  delay(20);
+  delay(20);  // Small delay for stability
 }
 
+// Turns off all motor pins
 void turnOffStepper() {
   digitalWrite(motorPin1, LOW);
   digitalWrite(motorPin2, LOW);
