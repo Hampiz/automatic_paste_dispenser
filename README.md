@@ -2,9 +2,9 @@
 The Automatic Paste Dispenser is a smart system designed to dispense toothpaste (or similar paste) automatically when it detects an object (like a toothbrush) in front of the tube opening.
 It uses an IR sensor for detection, a stepper motor for pressing out the paste, an OLED display for real-time feedback, a piezo buzzer for audible notification, and an LED to indicate active dispensing.
 
-Features
+Features:
 
-Automatic Detection: 
+Automatic Detection:
 
 IR sensor detects when an object is placed near the dispenser.
 
