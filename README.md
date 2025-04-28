@@ -50,11 +50,11 @@ The piezo buzzer emits a short beep.
 The LED lights up to indicate active dispensing.
 
 When no object is detected:
-
 The OLED shows "Waiting for object".
 
 
-Usage
+Usage:
+
 Simply place your toothbrush or object in front of the dispenser's IR sensor, and the system will automatically dispense the right amount of paste.
 
 
