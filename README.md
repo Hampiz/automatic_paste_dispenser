@@ -59,6 +59,6 @@ Simply place your toothbrush or object in front of the dispenser's IR sensor, an
 
 
 
-Länk till filmen:
+Link to the film:
 
 https://drive.google.com/file/d/1Dds-VR78_a4_Ae_zM0SrpJr6YpuRDWfE/view?usp=sharing 
